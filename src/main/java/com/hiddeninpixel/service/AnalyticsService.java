@@ -20,9 +20,14 @@ public class AnalyticsService {
         
         AnalyticsRecord record = new AnalyticsRecord();
         record.setAlgorithmName(algorithm);
-        record.setImageResolution(cover.getWidth() + "x" + cover.getHeight());
+        if (cover != null && stego != null) {
+            record.setImageResolution(cover.getWidth() + "x" + cover.getHeight());
+            record.setChangeRatio(calculateChangeRatio(cover, stego));
+        } else {
+            record.setImageResolution("Unknown");
+            record.setChangeRatio(0.0);
+        }
         record.setPayloadSizeKB(payloadSize / 1024.0);
-        record.setChangeRatio(calculateChangeRatio(cover, stego));
         record.setTimestamp(System.currentTimeMillis());
         
         dao.insert(record);

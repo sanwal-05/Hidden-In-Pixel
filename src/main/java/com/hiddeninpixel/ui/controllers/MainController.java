@@ -1,163 +1,279 @@
 package com.hiddeninpixel.ui.controllers;
 
 import com.hiddeninpixel.core.*;
-import com.hiddeninpixel.service.*;
-import com.hiddeninpixel.exception.*;
+import com.hiddeninpixel.exception.StegoException;
+import com.hiddeninpixel.service.ImageProcessor;
+import com.hiddeninpixel.service.AnalyticsService;
+import javafx.application.Platform;
+import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import javafx.scene.layout.StackPane;
 import javafx.stage.FileChooser;
-import java.io.*;
+import javafx.scene.input.Dragboard;
+import javafx.scene.input.TransferMode;
 import java.awt.image.BufferedImage;
-import javax.imageio.ImageIO;
+import java.io.File;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
 
 public class MainController {
-    
-    @FXML private ComboBox<String> algorithmComboBox;
-    @FXML private ImageView coverImageView;
-    @FXML private ImageView stegoImageView;
-    @FXML private TextArea messageTextArea;
-    @FXML private PasswordField keyPasswordField;
-    @FXML private Label statusLabel;
-    @FXML private ProgressBar progressBar;
-    
+
+    // --- ENCODE TAB CONTROLS ---
+    @FXML private StackPane encodeDropZone;
+    @FXML private ImageView encodeImageView;
+    @FXML private Button clearEncodeBtn;
+    @FXML private ComboBox<String> encodeAlgorithmCombo;
+    @FXML private PasswordField encodePasswordField;
+    @FXML private TextArea encodeMessageArea;
+    @FXML private ProgressBar encodeProgressBar;
+    @FXML private Label encodeStatusLabel;
+
+    // --- DECODE TAB CONTROLS ---
+    @FXML private StackPane decodeDropZone;
+    @FXML private ImageView decodeImageView;
+    @FXML private Button clearDecodeBtn;
+    @FXML private ComboBox<String> decodeAlgorithmCombo;
+    @FXML private PasswordField decodePasswordField;
+    @FXML private TextArea decodeMessageArea;
+    @FXML private ProgressBar decodeProgressBar;
+    @FXML private Label decodeStatusLabel;
+
+    private final Map<String, StegoAlgorithm> algorithms = new HashMap<>();
     private final ImageProcessor imageProcessor = new ImageProcessor();
     private final AnalyticsService analyticsService = new AnalyticsService();
-    private BufferedImage coverImage;
-    private BufferedImage stegoImage;
-    
+
+    private File currentEncodeFile;
+    private File currentDecodeFile;
+
     @FXML
     public void initialize() {
-        algorithmComboBox.getItems().addAll(
-            "Sequential LSB", "XOR-LSB", "Stochastic LSB", "Metadata Channel"
-        );
-        algorithmComboBox.setValue("Sequential LSB");
-    }
-    
-    @FXML
-    private void handleLoadImage() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Select Cover Image");
-        fileChooser.getExtensionFilters().add(
-            new FileChooser.ExtensionFilter("PNG Images", "*.png")
-        );
+        // Initialize Algorithms
+        algorithms.put("Sequential LSB", new SequentialLSB());
+        algorithms.put("XOR-LSB (Secure)", new XorLSB());
+        algorithms.put("Stochastic LSB", new StochasticLSB());
+        algorithms.put("Metadata (EOF Append)", new MetadataChannel());
+
+        // Setup ComboBoxes
+        encodeAlgorithmCombo.setItems(FXCollections.observableArrayList(algorithms.keySet()));
+        encodeAlgorithmCombo.getSelectionModel().selectFirst();
         
-        File file = fileChooser.showOpenDialog(null);
-        if (file != null) {
-            try {
-                coverImage = imageProcessor.loadImage(file);
-                coverImageView.setImage(convertToFXImage(coverImage));
-                statusLabel.setText("Image loaded: " + file.getName());
-            } catch (StegoException e) {
-                showError(e.getMessage());
+        decodeAlgorithmCombo.setItems(FXCollections.observableArrayList(algorithms.keySet()));
+        decodeAlgorithmCombo.getSelectionModel().selectFirst();
+
+        // Setup Drag and Drop
+        setupDragAndDrop(encodeDropZone, true);
+        setupDragAndDrop(decodeDropZone, false);
+    }
+
+    private void setupDragAndDrop(StackPane dropZone, boolean isEncode) {
+        dropZone.setOnDragOver(event -> {
+            Dragboard db = event.getDragboard();
+            if (db.hasFiles() && isImageFile(db.getFiles().get(0))) {
+                event.acceptTransferModes(TransferMode.COPY);
             }
-        }
+            event.consume();
+        });
+
+        dropZone.setOnDragDropped(event -> {
+            Dragboard db = event.getDragboard();
+            boolean success = false;
+            if (db.hasFiles() && isImageFile(db.getFiles().get(0))) {
+                File file = db.getFiles().get(0);
+                if (isEncode) {
+                    loadEncodeImage(file);
+                } else {
+                    loadDecodeImage(file);
+                }
+                success = true;
+            }
+            event.setDropCompleted(success);
+            event.consume();
+        });
     }
-    
-    @FXML
-    private void handleHide() {
-        if (coverImage == null) {
-            showError("Please load a cover image first");
-            return;
-        }
-        
-        String message = messageTextArea.getText();
-        if (message.isEmpty()) {
-            showError("Please enter a message to hide");
-            return;
-        }
-        
-        String key = keyPasswordField.getText();
-        String algoName = algorithmComboBox.getValue();
-        
-        try {
-            StegoAlgorithm algorithm = getAlgorithm(algoName);
-            byte[] payload = message.getBytes("UTF-8");
-            
-            stegoImage = algorithm.hide(coverImage, payload, key);
-            stegoImageView.setImage(convertToFXImage(stegoImage));
-            
-            analyticsService.logOperation(algoName, coverImage, stegoImage, payload.length);
-            
-            statusLabel.setText("Message hidden successfully using " + algoName);
-            
-        } catch (StegoException | UnsupportedEncodingException e) {
-            showError(e.getMessage());
-        }
+
+    private boolean isImageFile(File file) {
+        String name = file.getName().toLowerCase();
+        return name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg");
     }
-    
+
+    // --- ENCODE LOGIC ---
+
     @FXML
-    private void handleExtract() {
-        if (stegoImage == null) {
-            showError("No stego image available");
-            return;
-        }
-        
-        String key = keyPasswordField.getText();
-        String algoName = algorithmComboBox.getValue();
-        
-        try {
-            StegoAlgorithm algorithm = getAlgorithm(algoName);
-            byte[] extracted = algorithm.extract(stegoImage, key);
-            
-            messageTextArea.setText(new String(extracted, "UTF-8"));
-            statusLabel.setText("Message extracted successfully");
-            
-        } catch (StegoException | UnsupportedEncodingException e) {
-            showError(e.getMessage());
-        }
+    public void handleLoadEncodeImage() {
+        FileChooser fileChooser = getStandardImageFileChooser();
+        File file = fileChooser.showOpenDialog(encodeDropZone.getScene().getWindow());
+        if (file != null) loadEncodeImage(file);
     }
-    
+
+    private void loadEncodeImage(File file) {
+        currentEncodeFile = file;
+        encodeImageView.setImage(new Image(file.toURI().toString()));
+        encodeImageView.setVisible(true);
+        clearEncodeBtn.setVisible(true);
+        encodeStatusLabel.setText("Loaded: " + file.getName());
+        encodeDropZone.getChildren().get(0).setVisible(false); // Hide instructional VBox
+    }
+
     @FXML
-    private void handleSaveStego() {
-        if (stegoImage == null) {
-            showError("No stego image to save");
+    public void handleClearEncodeImage() {
+        currentEncodeFile = null;
+        encodeImageView.setImage(null);
+        encodeImageView.setVisible(false);
+        clearEncodeBtn.setVisible(false);
+        encodeMessageArea.clear();
+        encodePasswordField.clear();
+        encodeStatusLabel.setText("Ready to Encode");
+        encodeProgressBar.setProgress(0);
+        encodeDropZone.getChildren().get(0).setVisible(true); // Show instructional VBox
+    }
+
+    @FXML
+    public void handleEncode() {
+        if (currentEncodeFile == null) {
+            showAlert("Error", "Please load a cover image first.");
             return;
         }
-        
+
+        String message = encodeMessageArea.getText();
+        if (message == null || message.isEmpty()) {
+            showAlert("Error", "Please enter a secret message.");
+            return;
+        }
+
+        String algoName = encodeAlgorithmCombo.getValue();
+        StegoAlgorithm algorithm = algorithms.get(algoName);
+        String key = encodePasswordField.getText();
+
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("Save Stego Image");
-        fileChooser.getExtensionFilters().add(
-            new FileChooser.ExtensionFilter("PNG Images", "*.png")
-        );
-        
-        File file = fileChooser.showSaveDialog(null);
-        if (file != null) {
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Files", "*.png"));
+        File outputFile = fileChooser.showSaveDialog(encodeDropZone.getScene().getWindow());
+
+        if (outputFile == null) return;
+
+        encodeProgressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+        encodeStatusLabel.setText("Encoding in progress...");
+
+        CompletableFuture.runAsync(() -> {
             try {
-                imageProcessor.saveImage(stegoImage, file);
-                statusLabel.setText("Stego image saved: " + file.getName());
-            } catch (StegoException e) {
-                showError(e.getMessage());
+                if (algorithm instanceof MetadataChannel) {
+                    ((MetadataChannel) algorithm).embedIntoFile(currentEncodeFile, message.getBytes("UTF-8"), outputFile);
+                    // Standard log
+                    analyticsService.logOperation(algoName, null, null, message.length());
+                } else {
+                    BufferedImage cover = imageProcessor.loadImage(currentEncodeFile);
+                    byte[] payload = message.getBytes("UTF-8");
+                    BufferedImage stego = algorithm.hide(cover, payload, key);
+                    imageProcessor.saveImage(stego, outputFile);
+                    analyticsService.logOperation(algoName, cover, stego, payload.length);
+                }
+
+                Platform.runLater(() -> {
+                    encodeProgressBar.setProgress(1.0);
+                    encodeStatusLabel.setText("Success! Saved to " + outputFile.getName());
+                    showAlert("Success", "Message hidden successfully!");
+                    handleClearEncodeImage(); // Reset UI state after success
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    encodeProgressBar.setProgress(0);
+                    encodeStatusLabel.setText("Error: " + e.getMessage());
+                    showAlert("Encoding Error", e.getMessage());
+                });
             }
+        });
+    }
+
+    // --- DECODE LOGIC ---
+
+    @FXML
+    public void handleLoadDecodeImage() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Files", "*.png"));
+        File file = fileChooser.showOpenDialog(decodeDropZone.getScene().getWindow());
+        if (file != null) loadDecodeImage(file);
+    }
+
+    private void loadDecodeImage(File file) {
+        currentDecodeFile = file;
+        decodeImageView.setImage(new Image(file.toURI().toString()));
+        decodeImageView.setVisible(true);
+        clearDecodeBtn.setVisible(true);
+        decodeStatusLabel.setText("Loaded: " + file.getName());
+        decodeDropZone.getChildren().get(0).setVisible(false);
+    }
+
+    @FXML
+    public void handleClearDecodeImage() {
+        currentDecodeFile = null;
+        decodeImageView.setImage(null);
+        decodeImageView.setVisible(false);
+        clearDecodeBtn.setVisible(false);
+        decodeMessageArea.clear();
+        decodePasswordField.clear();
+        decodeStatusLabel.setText("Ready to Decode");
+        decodeProgressBar.setProgress(0);
+        decodeDropZone.getChildren().get(0).setVisible(true);
+    }
+
+    @FXML
+    public void handleDecode() {
+        if (currentDecodeFile == null) {
+            showAlert("Error", "Please load a stego image first.");
+            return;
         }
+
+        String algoName = decodeAlgorithmCombo.getValue();
+        StegoAlgorithm algorithm = algorithms.get(algoName);
+        String key = decodePasswordField.getText();
+
+        decodeProgressBar.setProgress(ProgressBar.INDETERMINATE_PROGRESS);
+        decodeStatusLabel.setText("Decoding in progress...");
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                byte[] extracted;
+                if (algorithm instanceof MetadataChannel) {
+                    extracted = ((MetadataChannel) algorithm).extractFromFile(currentDecodeFile);
+                } else {
+                    BufferedImage stego = imageProcessor.loadImage(currentDecodeFile);
+                    extracted = algorithm.extract(stego, key);
+                }
+
+                String message = new String(extracted, "UTF-8");
+
+                Platform.runLater(() -> {
+                    decodeProgressBar.setProgress(1.0);
+                    decodeStatusLabel.setText("Decoding successful.");
+                    decodeMessageArea.setText(message);
+                });
+            } catch (Exception e) {
+                Platform.runLater(() -> {
+                    decodeProgressBar.setProgress(0);
+                    decodeStatusLabel.setText("Error: " + e.getMessage());
+                    showAlert("Decoding Error", "Failed to extract (Wrong Password or File Corrupted).");
+                });
+            }
+        });
     }
-    
-    private StegoAlgorithm getAlgorithm(String name) {
-        return switch (name) {
-            case "Sequential LSB" -> new SequentialLSB();
-            case "XOR-LSB" -> new XorLSB();
-            case "Stochastic LSB" -> new StochasticLSB();
-            case "Metadata Channel" -> new MetadataChannel();
-            default -> new SequentialLSB();
-        };
+
+    private FileChooser getStandardImageFileChooser() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.getExtensionFilters().addAll(
+                new FileChooser.ExtensionFilter("Image Files", "*.png", "*.jpg", "*.jpeg")
+        );
+        return fileChooser;
     }
-    
-    private Image convertToFXImage(BufferedImage bImage) {
-        try {
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            ImageIO.write(bImage, "png", baos);
-            return new Image(new ByteArrayInputStream(baos.toByteArray()));
-        } catch (IOException e) {
-            return null;
-        }
-    }
-    
-    private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("Error");
+
+    private void showAlert(String title, String content) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle(title);
         alert.setHeaderText(null);
-        alert.setContentText(message);
+        alert.setContentText(content);
         alert.showAndWait();
     }
 }

@@ -2,6 +2,7 @@
 
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
+<?import javafx.scene.chart.*?>
 <?import javafx.geometry.Insets?>
 
 <VBox spacing="20" alignment="TOP_CENTER" xmlns:fx="http://javafx.com/fxml"
@@ -9,18 +10,39 @@
       prefWidth="1100" prefHeight="700">
     <padding><Insets top="20" left="40" right="40" bottom="20"/></padding>
     
-    <Label text="Operation History" style="-fx-font-size: 20px; -fx-text-fill: #FDC89C;"/>
+    <Label text="Operation History &amp; Comparative Analytics" style="-fx-font-size: 20px; -fx-text-fill: #e2e8f0; -fx-font-weight: bold;"/>
     
-    <TableView fx:id="analyticsTable" VBox.vgrow="ALWAYS">
-        <columns>
-            <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
-            <TableColumn fx:id="algorithmColumn" text="Algorithm" prefWidth="150"/>
-            <TableColumn fx:id="resolutionColumn" text="Resolution" prefWidth="150"/>
-            <TableColumn fx:id="sizeColumn" text="Payload (KB)" prefWidth="150"/>
-            <TableColumn fx:id="ratioColumn" text="Change Ratio (%)" prefWidth="150"/>
-            <TableColumn fx:id="timestampColumn" text="Timestamp" prefWidth="200"/>
-        </columns>
-    </TableView>
+    <SplitPane VBox.vgrow="ALWAYS" dividerPositions="0.45" orientation="VERTICAL" style="-fx-background-color: transparent;">
+        <!-- TOP: Live Animated Charts -->
+        <HBox spacing="20" alignment="CENTER">
+            <!-- Pie Chart: Algorithm Usage -->
+            <PieChart fx:id="algorithmUsageChart" animated="true" title="Algorithm Usage Distribution" legendSide="BOTTOM" HBox.hgrow="ALWAYS" styleClass="chart"/>
+            
+            <!-- Bar Chart: Average Change Ratio -->
+            <BarChart fx:id="metricsChart" animated="true" title="Avg Payload Size (KB) per Algorithm" legendSide="BOTTOM" HBox.hgrow="ALWAYS" styleClass="chart">
+                <xAxis>
+                    <CategoryAxis label="Algorithm" side="BOTTOM" animated="true"/>
+                </xAxis>
+                <yAxis>
+                    <NumberAxis label="Average Size (KB)" side="LEFT" animated="true"/>
+                </yAxis>
+            </BarChart>
+        </HBox>
+        
+        <!-- BOTTOM: Tabular Data -->
+        <VBox spacing="10">
+            <TableView fx:id="analyticsTable" VBox.vgrow="ALWAYS">
+                <columns>
+                    <TableColumn fx:id="idColumn" text="ID" prefWidth="50"/>
+                    <TableColumn fx:id="algorithmColumn" text="Algorithm" prefWidth="180"/>
+                    <TableColumn fx:id="resolutionColumn" text="Resolution" prefWidth="150"/>
+                    <TableColumn fx:id="sizeColumn" text="Payload (KB)" prefWidth="120"/>
+                    <TableColumn fx:id="ratioColumn" text="Change Ratio (%)" prefWidth="120"/>
+                    <TableColumn fx:id="timestampColumn" text="Timestamp" prefWidth="200"/>
+                </columns>
+            </TableView>
+        </VBox>
+    </SplitPane>
     
-    <Button text="Refresh Data" onAction="#refreshData"/>
+    <Button text="Refresh Analytics Data" onAction="#refreshData" prefWidth="300" style="-fx-padding: 10px;"/>
 </VBox>
