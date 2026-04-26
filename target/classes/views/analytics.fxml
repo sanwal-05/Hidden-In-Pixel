@@ -5,6 +5,7 @@
 <?import javafx.scene.chart.*?>
 <?import javafx.scene.image.ImageView?>
 <?import javafx.scene.text.TextFlow?>
+<?import javafx.scene.text.Text?>
 <?import javafx.geometry.Insets?>
 
 <VBox spacing="20" alignment="TOP_CENTER" xmlns:fx="http://javafx.com/fxml"
@@ -16,37 +17,46 @@
     
     <TabPane VBox.vgrow="ALWAYS" styleClass="floating">
         <Tab text="Analytics Overview" closable="false">
-            <VBox spacing="20">
+            <VBox spacing="20" style="-fx-background-color: #0f172a;">
                 <padding><Insets top="20" left="20" right="20" bottom="20"/></padding>
                 
                 <HBox spacing="20" alignment="CENTER" VBox.vgrow="ALWAYS">
-                    <!-- Pie Chart: Algorithm Usage -->
-                    <PieChart fx:id="algorithmUsageChart" animated="true" title="Algorithm Usage Distribution" legendSide="BOTTOM" HBox.hgrow="ALWAYS" styleClass="chart"/>
+                    <!-- Pie Chart Column -->
+                    <VBox spacing="10" HBox.hgrow="ALWAYS" alignment="TOP_CENTER">
+                        <PieChart fx:id="algorithmUsageChart" animated="true" title="Algorithm Usage Distribution" legendSide="BOTTOM" styleClass="chart"/>
+                        <VBox spacing="5" style="-fx-background-color: #1e293b; -fx-padding: 15; -fx-background-radius: 8; -fx-border-color: #334155; -fx-border-radius: 8;">
+                            <Label text="Pie Chart Insight" style="-fx-font-size: 14px; -fx-text-fill: #3b82f6; -fx-font-weight: bold;"/>
+                            <TextFlow>
+                                <Text style="-fx-fill: #94a3b8;" 
+                                      text="Visualizes which steganography methods are most frequently employed in your operations."/>
+                            </TextFlow>
+                        </VBox>
+                    </VBox>
                     
-                    <!-- Bar Chart: Average Payload Size -->
-                    <BarChart fx:id="metricsChart" animated="true" title="Avg Payload Size (KB) per Algorithm" legendSide="BOTTOM" HBox.hgrow="ALWAYS" styleClass="chart">
-                        <xAxis>
-                            <CategoryAxis label="Algorithm" side="BOTTOM" animated="true"/>
-                        </xAxis>
-                        <yAxis>
-                            <NumberAxis label="Average Size (KB)" side="LEFT" animated="true"/>
-                        </yAxis>
-                    </BarChart>
+                    <!-- Bar Chart Column -->
+                    <VBox spacing="10" HBox.hgrow="ALWAYS" alignment="TOP_CENTER">
+                        <BarChart fx:id="metricsChart" animated="true" title="Avg Payload Size (KB) per Algorithm" legendSide="BOTTOM" styleClass="chart">
+                            <xAxis>
+                                <CategoryAxis label="Algorithm" side="BOTTOM" animated="true"/>
+                            </xAxis>
+                            <yAxis>
+                                <NumberAxis label="Average Size (KB)" side="LEFT" animated="true"/>
+                            </yAxis>
+                        </BarChart>
+                        <VBox spacing="5" style="-fx-background-color: #1e293b; -fx-padding: 15; -fx-background-radius: 8; -fx-border-color: #334155; -fx-border-radius: 8;">
+                            <Label text="Bar Chart Insight" style="-fx-font-size: 14px; -fx-text-fill: #3b82f6; -fx-font-weight: bold;"/>
+                            <TextFlow>
+                                <Text style="-fx-fill: #94a3b8;" 
+                                      text="Displays the average amount of data (in KB) successfully hidden using each specific technique."/>
+                            </TextFlow>
+                        </VBox>
+                    </VBox>
                 </HBox>
-
-                <!-- Analytics Explanation Box -->
-                <VBox spacing="10" style="-fx-background-color: #1e293b; -fx-padding: 15; -fx-background-radius: 8; -fx-border-color: #334155; -fx-border-radius: 8;">
-                    <Label text="Analytics Insights" style="-fx-font-size: 16px; -fx-text-fill: #3b82f6;"/>
-                    <TextFlow>
-                        <Label wrapText="true" style="-fx-font-weight: normal; -fx-text-fill: #94a3b8;" 
-                               text="• The Algorithm Usage Distribution (Pie Chart) visualizes which steganography methods are most frequently employed in your operations.&#10;• The Avg Payload Size per Algorithm (Bar Chart) displays the average amount of data (in KB) successfully hidden using each specific technique. This helps in identifying which algorithms are most efficient for larger datasets."/>
-                    </TextFlow>
-                </VBox>
             </VBox>
         </Tab>
         
         <Tab text="Operation History" closable="false">
-            <VBox spacing="10">
+            <VBox spacing="10" style="-fx-background-color: #0f172a;">
                 <padding><Insets top="20" left="20" right="20" bottom="20"/></padding>
                 <TableView fx:id="analyticsTable" VBox.vgrow="ALWAYS">
                     <columns>
@@ -60,6 +70,7 @@
                 </TableView>
             </VBox>
         </Tab>
+
     </TabPane>
     
     <Button text="Refresh Analytics Data" onAction="#refreshData" prefWidth="300" style="-fx-padding: 10px;"/>

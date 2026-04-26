@@ -47,7 +47,20 @@
 
 .text-field:focused, .password-field:focused, .text-area:focused {
     -fx-border-color: #3b82f6;
-    -fx-background-color: #0f172a;
+}
+
+.text-area {
+    -fx-control-inner-background: #1e293b;
+    -fx-background-color: #1e293b;
+    -fx-text-fill: #f8fafc;
+}
+
+.text-area .content, .text-area .viewport {
+    -fx-background-color: #1e293b;
+}
+
+.text-area .text {
+    -fx-fill: #f8fafc;
 }
 
 /* ComboBox */

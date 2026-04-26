@@ -4,7 +4,6 @@ com/hiddeninpixel/service/BitManipulator.class
 com/hiddeninpixel/exception/StegoException.class
 com/hiddeninpixel/ui/controllers/AnalyticsController.class
 com/hiddeninpixel/exception/UnsupportedImageFormatException.class
-com/hiddeninpixel/ui/components/HistogramChart.class
 com/hiddeninpixel/service/SecurityProvider.class
 com/hiddeninpixel/exception/InvalidKeyException.class
 com/hiddeninpixel/core/XorLSB.class
@@ -17,5 +16,4 @@ com/hiddeninpixel/core/MetadataChannel.class
 com/hiddeninpixel/db/DatabaseConnection.class
 com/hiddeninpixel/exception/InsufficientCapacityException.class
 com/hiddeninpixel/model/AnalyticsRecord.class
-com/hiddeninpixel/ui/components/DifferenceMapGenerator.class
 com/hiddeninpixel/ui/controllers/MainController.class
