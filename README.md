@@ -1,8 +1,10 @@
-# 🌸 Hidden-In-Pixel (HIP)
+# 🌸 LUMINAE
+---
+
 
 **Denial of Existence through High-Fidelity Image Steganography**
 
-Hidden-In-Pixel is a professional-grade Java application that secures digital communication by concealing secret data within PNG images. Choose from 4 steganographic algorithms, analyze embeddings in real-time, and maintain a persistent history of operations.
+Luminae is a professional-grade Java application that secures digital communication by concealing secret data within PNG images. Choose from 4 steganographic algorithms, analyze embeddings in real-time, and maintain a persistent history of operations.
 
 ---
 
