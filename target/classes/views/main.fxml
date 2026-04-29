@@ -55,9 +55,13 @@
                                 <VBox spacing="5" VBox.vgrow="ALWAYS">
                                     <Label text="Secret Message:"/>
                                     <TextArea fx:id="encodeMessageArea" promptText="Enter the text to hide within the image..." wrapText="true" VBox.vgrow="ALWAYS"/>
+                                    <HBox spacing="10" alignment="CENTER_LEFT">
+                                        <Label fx:id="encodeCharCountLabel" text="Characters: 0 / 0" style="-fx-text-fill: #94a3b8;"/>
+                                        <Label fx:id="encodeWarningLabel" text="Message exceeds capacity!" style="-fx-text-fill: #ef4444;" visible="false" managed="false"/>
+                                    </HBox>
                                 </VBox>
                                 
-                                <Button text="Hide Message &amp; Save" onAction="#handleEncode" maxWidth="Infinity" style="-fx-padding: 15px; -fx-font-size: 16px;"/>
+                                <Button fx:id="encodeBtn" text="Hide Message &amp; Save" onAction="#handleEncode" maxWidth="Infinity" style="-fx-padding: 15px; -fx-font-size: 16px;"/>
                             </VBox>
                         </HBox>
                         
