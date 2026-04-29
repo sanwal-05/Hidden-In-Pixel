@@ -30,6 +30,9 @@ public class MainController {
     @FXML private TextArea encodeMessageArea;
     @FXML private ProgressBar encodeProgressBar;
     @FXML private Label encodeStatusLabel;
+    @FXML private Label encodeCharCountLabel;
+    @FXML private Label encodeWarningLabel;
+    @FXML private Button encodeBtn;
 
     // --- DECODE TAB CONTROLS ---
     @FXML private StackPane decodeDropZone;
@@ -47,6 +50,7 @@ public class MainController {
 
     private File currentEncodeFile;
     private File currentDecodeFile;
+    private BufferedImage currentCoverImage;
 
     @FXML
     public void initialize() {
@@ -66,6 +70,17 @@ public class MainController {
         // Setup Drag and Drop
         setupDragAndDrop(encodeDropZone, true);
         setupDragAndDrop(decodeDropZone, false);
+
+        // Add Listeners
+        encodeMessageArea.textProperty().addListener((observable, oldValue, newValue) -> {
+            updateCapacityDisplay();
+        });
+
+        encodeAlgorithmCombo.valueProperty().addListener((observable, oldValue, newValue) -> {
+            updateCapacityDisplay();
+        });
+        
+        updateCapacityDisplay();
     }
 
     private void setupDragAndDrop(StackPane dropZone, boolean isEncode) {
@@ -108,18 +123,64 @@ public class MainController {
         if (file != null) loadEncodeImage(file);
     }
 
+    private void updateCapacityDisplay() {
+        if (currentCoverImage == null) {
+            if (encodeCharCountLabel != null) encodeCharCountLabel.setText("Characters: 0 / 0");
+            if (encodeWarningLabel != null) {
+                encodeWarningLabel.setVisible(false);
+                encodeWarningLabel.setManaged(false);
+            }
+            if (encodeBtn != null) encodeBtn.setDisable(false);
+            return;
+        }
+
+        String algoName = encodeAlgorithmCombo.getValue();
+        StegoAlgorithm algorithm = algorithms.get(algoName);
+        
+        int maxCapacity = 0;
+        if (algorithm != null) {
+            maxCapacity = algorithm.getCapacity(currentCoverImage);
+        }
+
+        int currentLength = encodeMessageArea.getText() != null ? encodeMessageArea.getText().length() : 0;
+        if (encodeCharCountLabel != null) {
+            encodeCharCountLabel.setText("Characters: " + currentLength + " / " + maxCapacity);
+        }
+
+        if (currentLength > maxCapacity && maxCapacity > 0) {
+            if (encodeWarningLabel != null) {
+                encodeWarningLabel.setVisible(true);
+                encodeWarningLabel.setManaged(true);
+            }
+            if (encodeBtn != null) encodeBtn.setDisable(true);
+        } else {
+            if (encodeWarningLabel != null) {
+                encodeWarningLabel.setVisible(false);
+                encodeWarningLabel.setManaged(false);
+            }
+            if (encodeBtn != null) encodeBtn.setDisable(false);
+        }
+    }
+
     private void loadEncodeImage(File file) {
         currentEncodeFile = file;
+        try {
+            currentCoverImage = imageProcessor.loadImage(file);
+        } catch (Exception e) {
+            currentCoverImage = null;
+        }
         encodeImageView.setImage(new Image(file.toURI().toString()));
         encodeImageView.setVisible(true);
         clearEncodeBtn.setVisible(true);
         encodeStatusLabel.setText("Loaded: " + file.getName());
         encodeDropZone.getChildren().get(0).setVisible(false); // Hide instructional VBox
+        updateCapacityDisplay();
     }
 
     @FXML
     public void handleClearEncodeImage() {
         currentEncodeFile = null;
+        currentCoverImage = null;
         encodeImageView.setImage(null);
         encodeImageView.setVisible(false);
         clearEncodeBtn.setVisible(false);
@@ -128,6 +189,7 @@ public class MainController {
         encodeStatusLabel.setText("Ready to Encode");
         encodeProgressBar.setProgress(0);
         encodeDropZone.getChildren().get(0).setVisible(true); // Show instructional VBox
+        updateCapacityDisplay();
     }
 
     @FXML
